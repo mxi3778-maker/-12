@@ -1,0 +1,86 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local DEFAULT_SPEED = 16   -- ความเร็วปกติของ Roblox
+local MAX_SPEED = 100      -- ปรับสูงสุดได้ตามต้องการ
+local currentSpeed = DEFAULT_SPEED
+
+local function getHumanoid()
+    local character = player.Character or player.CharacterAdded:Wait()
+    return character:WaitForChild("Humanoid")
+end
+
+-- ตั้งความเร็วทันทีตอนตัวละครเกิด/รีสปอน
+player.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = currentSpeed
+end)
+
+-- สร้าง UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SpeedControl"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 100)
+frame.Position = UDim2.new(0, 20, 0.5, -50)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.2
+frame.Parent = screenGui
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 0.4, 0)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.new(1, 1, 1)
+label.TextScaled = true
+label.Font = Enum.Font.SourceSansBold
+label.Text = "ความเร็ว: " .. currentSpeed
+label.Parent = frame
+
+local slider = Instance.new("TextButton")
+slider.Size = UDim2.new(0.9, 0, 0.3, 0)
+slider.Position = UDim2.new(0.05, 0, 0.5, 0)
+slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+slider.Text = ""
+slider.Parent = frame
+
+local fill = Instance.new("Frame")
+fill.Size = UDim2.new(currentSpeed / MAX_SPEED, 0, 1, 0)
+fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+fill.BorderSizePixel = 0
+fill.Parent = slider
+
+local dragging = false
+
+local function updateSpeed(inputX)
+    local sliderPos = slider.AbsolutePosition.X
+    local sliderWidth = slider.AbsoluteSize.X
+    local ratio = math.clamp((inputX - sliderPos) / sliderWidth, 0, 1)
+
+    currentSpeed = math.floor(ratio * MAX_SPEED)
+    fill.Size = UDim2.new(ratio, 0, 1, 0)
+    label.Text = "ความเร็ว: " .. currentSpeed
+
+    local humanoid = getHumanoid()
+    humanoid.WalkSpeed = currentSpeed
+end
+
+slider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        updateSpeed(input.Position.X)
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateSpeed(input.Position.X)
+    end
+end)
+
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
